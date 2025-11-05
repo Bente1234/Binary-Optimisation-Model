@@ -1,4 +1,17 @@
-#Greedy algorithm
+"""
+Storage Location Optimisation Heuristic
+This script implements a greedy heuristic for assigning tools to storage sites 
+based on cost and service-level constraints. 
+
+All data used in the original industrial case are confidential and therefore 
+excluded; this script contains only the model logic for educational use.
+"""
+# Each tool has attributes:
+# sr/sp/se  – Service Level Agreements thresholds for routine, priority, emergency requests
+# f         – tool usage frequency
+# fp        – footprint (storage area requirement)
+# m_cost    – maintenance cost per tool
+
 records = []
 for t in tools_df.index:
     sr, sp, se = sla_r[t], sla_p[t], sla_e[t]
@@ -8,7 +21,7 @@ for t in tools_df.index:
     tool_size  = size_lookup.get(t, "")
     dest       = dest_lookup.get(t, "")
 
-    #Loop 1
+    # Phase 1 – Evaluate all candidate locations and compute unconstrained costs
     best_any, cost_any = None, np.inf
     for b in cands:
         storage_cost = fp * sqm_p[b]
@@ -43,7 +56,7 @@ for t in tools_df.index:
         sla_opts.append((b, storage_cost + cleaning_cost + handling_cost + m_cost))
     sla_opts.sort(key=lambda x: x[1])
 
-    #Loop 2
+    # Phase 2 – Enforce service-level constraints and assign top-ranked tools
     if sla_opts:
         delta = sla_opts[0][1] - cost_any
     else:
@@ -87,7 +100,7 @@ for r in to_promote:
             assign_map[r['Tool']] = b
             break
 
-#Loop 3
+# Phase 3 – Allocate remaining tools while respecting capacity limits
 for r in records:
     t, f, fp = r['Tool'], r['Frequency'], r['Footprint']
     tool_size = size_lookup.get(t, "")
