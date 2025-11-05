@@ -8,7 +8,7 @@ It formulates the problem as a binary integer programme, solved by a greedy heur
 
 All data used in the original industrial case are confidential and therefore not included in this repository.  
 For the same reason, data preprocessing steps are also omitted.  
-Only the heuristic model structure and logic are presented in the Heuristic Model file. 
+Only the heuristic model structure and logic are presented in the Heuristic Solution file. 
  
 
 
