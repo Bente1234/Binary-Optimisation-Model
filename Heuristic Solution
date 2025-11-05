@@ -1,0 +1,113 @@
+#Greedy algorithm
+records = []
+for t in tools_df.index:
+    sr, sp, se = sla_r[t], sla_p[t], sla_e[t]
+    f, fp      = frequency[t], footprint[t]
+    m_cost     = maintenance_cost_dict.get(t, 0.0)
+    ratio      = fp / f if f > 0 else np.inf
+    tool_size  = size_lookup.get(t, "")
+    dest       = dest_lookup.get(t, "")
+
+    #Loop 1
+    best_any, cost_any = None, np.inf
+    for b in cands:
+        storage_cost = fp * sqm_p[b]
+        if b in ['5L', 'Overflow']:
+            clean_rate = cost_per_size.get(tool_size, 0.0)
+        else:
+            clean_rate = clean_b[b]
+        cleaning_cost = clean_rate * f
+        handle_rate = cost_per_route.get((b, dest, tool_size), hand_b[b])
+        handling_cost = handle_rate * f * 2
+
+        total_c = storage_cost + cleaning_cost + handling_cost + m_cost
+        if total_c < cost_any:
+            best_any, cost_any = b, total_c
+
+    sla_opts = []
+    for b in cands:
+        dr, dp, de = routine_dt[b], priority_dt[b], emergency_dt[b]
+        if pd.notna(sr) and dr > sr:
+            continue
+        if pd.notna(sp) and dp > sp:
+            continue
+        if pd.notna(se) and de > se:
+            continue
+
+        storage_cost = fp * sqm_p[b]
+        clean_rate   = cost_per_size.get(tool_size, 0.0) if b in ['5L', 'Overflow'] else clean_b[b]
+        cleaning_cost = clean_rate * f
+        handle_rate    = cost_per_route.get((b, dest, tool_size), hand_b[b])
+        handling_cost  = handle_rate * f * 2
+
+        sla_opts.append((b, storage_cost + cleaning_cost + handling_cost + m_cost))
+    sla_opts.sort(key=lambda x: x[1])
+
+    #Loop 2
+    if sla_opts:
+        delta = sla_opts[0][1] - cost_any
+    else:
+        delta = np.inf
+
+    records.append({
+        'Tool':            t,
+        'Frequency':       f,
+        'Footprint':       fp,
+        'MaintenanceCost': m_cost,
+        'ratio':           ratio,
+        'best_any':        best_any,
+        'cost_any':        cost_any,
+        'sla_opts':        sla_opts,
+        'on_time':         False,
+        'delta':           delta
+    })
+
+used_capacity = {b: 0.0 for b in cands}
+covered = 0.0
+assign_map = {}
+for r in sorted(records, key=lambda r: r['ratio']):
+    if r['sla_opts'] and r['best_any'] == r['sla_opts'][0][0]:
+        b, f, fp = r['best_any'], r['Frequency'], r['Footprint']
+        if used_capacity[b] + fp <= capacity_by_building[b]:
+            r['on_time'] = True
+            used_capacity[b] += fp
+            covered += f
+            assign_map[r['Tool']] = b
+to_promote = [r for r in records if not r['on_time'] and r['sla_opts']]
+to_promote.sort(key=lambda r: ((r['delta'] / r['Frequency']) if r['Frequency'] > 0 else np.inf, r['ratio']))
+for r in to_promote:
+    if covered >= threshold:
+        break
+    f, fp = r['Frequency'], r['Footprint']
+    for b, _ in r['sla_opts']:
+        if used_capacity[b] + fp <= capacity_by_building[b]:
+            r['on_time'] = True
+            used_capacity[b] += fp
+            covered += f
+            assign_map[r['Tool']] = b
+            break
+
+#Loop 3
+for r in records:
+    t, f, fp = r['Tool'], r['Frequency'], r['Footprint']
+    tool_size = size_lookup.get(t, "")
+    dest       = dest_lookup.get(t, "")
+    if t not in assign_map:
+        opts = [(r['best_any'], r['cost_any'])] + [
+            (b,
+             fp * sqm_p[b] +
+             (cost_per_size.get(tool_size, 0.0) if b in ['5L', 'Overflow'] else clean_b[b]) * f +
+             (cost_per_route.get((b, dest, tool_size), hand_b[b]) * f * 2) +
+             r['MaintenanceCost']
+            )
+            for b in cands if b != r['best_any']
+        ]
+        opts.sort(key=lambda x: x[1])
+        for b, _ in opts:
+            if used_capacity[b] + fp <= capacity_by_building[b]:
+                assign_map[t] = b
+                used_capacity[b] += fp
+                break
+        else:
+            assign_map[t] = 'Overflow'
+            used_capacity['Overflow'] = used_capacity.get('Overflow', 0.0) + fp
