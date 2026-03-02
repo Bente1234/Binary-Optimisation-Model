@@ -22,4 +22,4 @@ Because exact BILP solving becomes computationally expensive at scale, a constra
 - Constraint filtering and prioritised allocation  
 - Scalable heuristic design for large problem instances  
 
-Industrial data are confidential and excluded; the repository contains the core optimisation logic only.
+Industrial data are confidential and excluded, the Heuristic Solution file contains the core optimisation logic only.
