@@ -1,14 +1,25 @@
-# Binary-Optimisation Model
+# Binary Integer Optimisation — Capacity & Service-Level-Agreement Constrained Allocation
 
-This project presents an optimisation model designed to determine the most cost-efficient distribution of a pool of 45,000 tools across six storage sites.  
-The objective is to minimise total operational costs while maintaining service-level targets for tool availability and response time.
+This project implements a large-scale **binary integer allocation model** for assigning tools to storage locations under cost, capacity, and service-level (SLA) constraints.
 
-The model determines optimal tool storage across multiple locations, considering factors such as capacity, distance, and service-level requirements.  
-It formulates the problem as a binary integer programme, solved by a greedy heuristic which iterates over all tools in three phases.
+The objective is to minimise total cost (storage, handling, cleaning, maintenance) subject to:
+- binary assignment (each tool assigned to exactly one location)
+- location capacity constraints
+- SLA response-time constraints
 
-All data used in the original industrial case are confidential and therefore not included in this repository.  
-For the same reason, data preprocessing steps are also omitted.  
-Only the heuristic model structure and logic are presented in the Heuristic Solution file. 
- 
+Because exact BILP solving becomes computationally expensive at scale, a constraint-aware greedy heuristic is implemented.
 
+## Heuristic Structure
 
+**Phase 1:** Evaluate all tool–location pairs and compute unconstrained and SLA-feasible costs.  
+**Phase 2:** Prioritise high-impact tools and allocate SLA-feasible assignments under capacity limits.  
+**Phase 3:** Assign remaining tools to cheapest feasible locations while respecting capacity.
+
+## Technical Focus
+
+- Binary integer optimisation logic  
+- Cost decomposition and trade-off modelling  
+- Constraint filtering and prioritised allocation  
+- Scalable heuristic design for large problem instances  
+
+Industrial data are confidential and excluded; the repository contains the core optimisation logic only.
